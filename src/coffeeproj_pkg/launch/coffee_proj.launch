@@ -1,0 +1,60 @@
+<launch>
+  <arg name="broker_ip" default="www.xufeng.vip" />
+  <arg name="broker_port" default="443" />
+  <arg name="drone_id" default="drone_001" />
+  <arg name="mqtt_user" default="drone_001" />
+  <arg name="mqtt_pw" default="drone_001" />
+
+    <arg name="start_coffee_proj_node" default="true"/>
+    <arg name="start_pod_down" default="false"/>
+
+
+  <node if="$(arg start_coffee_proj_node)"
+        name="coffee_proj_node"
+        pkg="coffeeproj_pkg"
+        type="coffee_proj_node.py"
+        output="screen"
+        required="true">
+
+    <param name="broker_ip" value="$(arg broker_ip)" />
+    <param name="broker_port" value="$(arg broker_port)" />
+    <param name="mqtt_user" value="$(arg mqtt_user)" />
+    <param name="mqtt_pw" value="$(arg mqtt_pw)" />
+    <param name="drone_id" value="$(arg drone_id)" />
+
+    <param name="telemetry_rate" value="1.0" />
+
+    <param name="mavros_state" value="/mavros/state" />
+    <param name="mavros_local_pose" value="/mavros/local_position/pose" />
+    <param name="mavros_local_vel" value="/mavros/local_position/velocity_local" />
+    <param name="mavros_global_pos" value="/mavros/global_position/global" />
+    <param name="mavros_battery" value="/mavros/battery" />
+    <param name="mavros_home_pos" value="/mavros/home_position/home" />
+    <param name="mavros_setpoint_pos" value="/mavros/setpoint_position/local" />
+    <param name="mavros_arming_srv" value="/mavros/cmd/arming" />
+    <param name="mavros_set_mode_srv" value="/mavros/set_mode" />
+    <param name="mavros_land_srv" value="/mavros/cmd/land" />
+
+    <param name="takeoff_alt" value="5.0" />
+    <param name="unload_timeS" value="8.0" />
+    <param name="cruise_speed" value="5.0" />
+    <param name="waypoint_tolerance" value="1.5" />
+    <param name="pre_land_alt" value="3.0" />
+    <param name="ground_threshold" value="0.25" />
+    <param name="rth_alt" value="10.0" />
+    <param name="phase_timeout" value="120.0" />
+    <param name="setpoint_rate" value="20.0" />
+
+    <!-- debug参数 -->
+    <!-- 这个控制是否发送遥测假gps坐标还是真实mavros坐标 -->
+    <param name="debug_log_telemetry" value="false" />
+    <!-- 这个控制使用局部坐标系飞行还是使用gps坐标飞行 -->
+    <param name="debug_setPosition_gps" value="true" />
+
+  </node>
+
+  <node if="$(arg start_pod_down)" name="pod_down" pkg="coffeeproj_pkg" type="pod_down.py" output="screen" required="true">
+    <param name="pod_host" value="192.168.1.14" />
+    <param name="pod_port" value="2332"/>
+  </node>
+</launch>
