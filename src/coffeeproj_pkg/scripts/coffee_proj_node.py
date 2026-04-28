@@ -2243,8 +2243,14 @@ class CoffeeProjNode:
         Note: 添加异常处理防止定时器因异常停止
         """
         try:
+            # 调试：确认定时器触发（使用loginfo确保能看到）
+            rospy.loginfo("[CoffeeProj] Telemetry timer triggered")
+            
             if not self.mqtt_client.is_connected():
+                rospy.logdebug("[CoffeeProj] MQTT not connected, skip telemetry")
                 return
+            
+            rospy.logdebug("[CoffeeProj] MQTT connected, preparing telemetry data")
             
             state = self.state_machine.get_state()
             
@@ -2279,6 +2285,9 @@ class CoffeeProjNode:
             task_data = self.state_machine.get_task_data()
             task_id = task_data.get('task_id') if task_data else None
             
+            rospy.logdebug("[CoffeeProj] Data prepared: lat=%.6f, lng=%.6f, alt=%.1f",
+                          self._global_pos.latitude, self._global_pos.longitude, self._relative_alt)
+            
             data = {
                 'taskId': task_id,
                 'status': status,
@@ -2292,9 +2301,13 @@ class CoffeeProjNode:
                 'flightMode': self._mav_state.mode
             }
             
+            rospy.logdebug("[CoffeeProj] Calling mqtt_client.publish_telemetry")
             self.mqtt_client.publish_telemetry(data)
+            rospy.logdebug("[CoffeeProj] Telemetry published successfully")
         except Exception as e:
             rospy.logerr("[CoffeeProj] Telemetry publish error: %s", e)
+            import traceback
+            rospy.logerr("[CoffeeProj] Traceback: %s", traceback.format_exc())
     
     def handle_task(self, payload):
         """
