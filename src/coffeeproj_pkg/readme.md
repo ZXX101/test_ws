@@ -9,7 +9,7 @@ mqtt 初始化
 
 # 启动
 roscore
-
-roslaunch mission_master_pkg mavros_px4_udp.launch fcu_url:=udp://:14550@255.255.255.255:14550
+make px4_sitl_default gazebo-classic
+roslaunch mavros px4.launch fcu_url:="udp://:14540@127.0.0.1:14557" use_sim_time:=false
 
 最后执行./start_coffeeproj.sh

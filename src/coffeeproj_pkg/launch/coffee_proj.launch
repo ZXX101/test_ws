@@ -1,4 +1,6 @@
 <launch>
+  <!-- Use simulation time for PX4 SITL -->
+  <!-- <param name="use_sim_time" value="true"/> -->
   <arg name="broker_ip" default="www.xufeng.vip" />
   <arg name="broker_port" default="443" />
   <arg name="drone_id" default="drone_001" />
@@ -31,13 +33,14 @@
     <param name="mavros_battery" value="/mavros/battery" />
     <param name="mavros_home_pos" value="/mavros/home_position/home" />
     <param name="mavros_setpoint_pos" value="/mavros/setpoint_position/local" />
+    <param name="mavros_setpoint_pos_global" value="/mavros/setpoint_position/global" />
     <param name="mavros_arming_srv" value="/mavros/cmd/arming" />
     <param name="mavros_set_mode_srv" value="/mavros/set_mode" />
     <param name="mavros_land_srv" value="/mavros/cmd/land" />
 
-    <param name="takeoff_alt" value="5.0" />
+    <param name="takeoff_alt" value="2.0" />
     <param name="unload_timeS" value="8.0" />
-    <param name="cruise_speed" value="5.0" />
+    <param name="cruise_speed" value="30.0" />
     <param name="waypoint_tolerance" value="1.5" />
     <param name="pre_land_alt" value="3.0" />
     <param name="ground_threshold" value="0.25" />
