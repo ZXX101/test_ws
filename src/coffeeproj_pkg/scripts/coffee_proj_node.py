@@ -1717,8 +1717,14 @@ class FlightController:
         
         if not mode_success:
             rospy.logerr("[Flight] Failed to set OFFBOARD mode")
+            rospy.logerr("[Flight] Failed to set OFFBOARD mode:STATE:,%s",self._mav_state.mode)
             return False
         
+        # test controller mode
+        for _ in range(200):
+            rospy.loginfo("[Flight] Testing modeset by controller")
+            rate.sleep()
+
         # Arm while continuously sending setpoints
         rospy.loginfo("[Flight] Arming...")
         arm_success = False
