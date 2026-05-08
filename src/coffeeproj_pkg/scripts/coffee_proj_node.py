@@ -15,7 +15,7 @@ import ssl
 from enum import IntEnum
 from std_msgs.msg import Header, Float64
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from geographic_msgs.msg import GeoPoseStamped
+from geographic_msgs.msg import GeoPoseStamped , GeoPointStamped
 from sensor_msgs.msg import BatteryState, NavSatFix
 from mavros_msgs.msg import State, HomePosition
 from mavros_msgs.srv import CommandBool, CommandBoolRequest
@@ -425,7 +425,10 @@ class TaskStateMachine:
         
         无任务时等待，不做任何操作
         """
-        pass
+        # pass
+        if self._abort_requested:
+            self._handle_aborted()
+            return
     
     def _handle_loaded(self):
         """
@@ -623,6 +626,7 @@ class TaskStateMachine:
         location = "home" if self._is_return_phase else "dest"
         rospy.loginfo("[StateMachine] Hovering at %s, waiting for land command...", location)
         
+        # 一直发送悬停指令，直到收到降落指令或触发中断
         while self._running and not rospy.is_shutdown() and not self._land_requested:
             if self._abort_requested:
                 self._handle_aborted()
@@ -1171,11 +1175,11 @@ class MqttClient:
                     "flightMode": data.get('flightMode', 'manual')
                 }
             }
-        # if self.debug_log_telemetry:
-        rospy.loginfo("[MQTT] Publishing telemetry: taskId=%s status=%s pos=(%.6f, %.6f, %.1f) battery=%.1f%% mode=%s",
-                    payload['taskId'], payload['status'], 
-                    payload['position']['lat'], payload['position']['lng'], payload['position']['alt'],
-                    payload['position']['battery'], payload['position']['flightMode'])
+        if self.debug_log_telemetry:
+            rospy.loginfo("[MQTT] Publishing telemetry: taskId=%s status=%s pos=(%.6f, %.6f, %.1f) battery=%.1f%% mode=%s",
+                        payload['taskId'], payload['status'], 
+                        payload['position']['lat'], payload['position']['lng'], payload['position']['alt'],
+                        payload['position']['battery'], payload['position']['flightMode'])
             
         self._mqtt.publish(self.TOPIC_TELEMETRY, json.dumps(payload), qos=1)
     
@@ -1256,6 +1260,7 @@ class FlightController:
         
         self._mav_state = State()
         self._local_pose = PoseStamped()
+        self._gps_origin = GeoPointStamped()
         self._home_pos = None
         
         self._abort = False
@@ -1284,6 +1289,11 @@ class FlightController:
         rospy.Subscriber(
             rospy.get_param('~mavros_home_pos', '/mavros/home_position/home'),
             HomePosition, self._cb_home_pos, queue_size=1
+        )
+
+        rospy.Subscriber(
+            rospy.get_param('~mavros_gps_origin', '/mavros/global_position/gp_origin'),
+            GeoPointStamped, self._cb_gps_origin, queue_size=1
         )
         
         self._wait_mavros_services()
@@ -1336,17 +1346,23 @@ class FlightController:
         """Home位置回调"""
         self._home_pos = msg
         
-        lat = msg.geo.latitude
-        lon = msg.geo.longitude
-        ellipsoid_alt = msg.geo.altitude
+        # lat = msg.geo.latitude
+        # lon = msg.geo.longitude
+        # ellipsoid_alt = msg.geo.altitude
         
-        # 延迟加载geoid模型并计算geoid高度
-        geoid_height = self._get_geoid().height(lat, lon)
-        amsl_alt = ellipsoid_alt - geoid_height
+        # # 延迟加载geoid模型并计算geoid高度
+        # geoid_height = self._get_geoid().height(lat, lon)
+        # amsl_alt = ellipsoid_alt - geoid_height
         
         # rospy.loginfo("[Flight] HOME UPDATE: lat=%.6f, lon=%.6f, ellipsoid=%.1f m, geoid=%.1f m -> AMSL=%.1f m",
         #               lat, lon, ellipsoid_alt, geoid_height, amsl_alt)
     
+    def _cb_gps_origin(self, msg):
+        """GPS原点回调（同Home位置）"""
+        self._gps_origin = msg
+
+
+
     def get_local_pose(self):
         """
         获取当前位置（ENU坐标）
@@ -1452,6 +1468,7 @@ class FlightController:
                 lon: 经度
                 alt: 高度
         
+                转成了ENU坐标
         Returns:
             GeoPoseStamped消息
         """
@@ -1721,9 +1738,9 @@ class FlightController:
             return False
         
         # test controller mode
-        for _ in range(200):
-            rospy.loginfo("[Flight] Testing modeset by controller")
-            rate.sleep()
+        # for _ in range(200):
+        #     rospy.loginfo("[Flight] Testing modeset by controller")
+        #     rate.sleep()
 
         # Arm while continuously sending setpoints
         rospy.loginfo("[Flight] Arming...")
@@ -2068,7 +2085,7 @@ class FlightController:
     
     def rth(self, rtl_type="reverse", waypoint_list=None, rtl_waypoint_list=None, home_gps=None):
         """
-        返航（Return to Home）
+        返航（Return to Home） 任务的返航阶段
         
         Args:
             rtl_type: 返航类型
@@ -2119,7 +2136,7 @@ class FlightController:
             current_z = self._local_pose.pose.position.z
         
         # 飞到原点（保持当前高度）
-        if not self.fly_to(0.0, 0.0, current_z):
+        if not self.fly_to_gps(self._gps_origin.position.latitude, self._gps_origin.position.longitude, current_z):
             rospy.logerr("[Flight] Failed to reach home position")
             return False
         
@@ -2192,6 +2209,10 @@ class CoffeeProjNode:
             rospy.get_param('~mavros_battery', '/mavros/battery'),
             BatteryState, self._cb_battery, queue_size=1
         )
+        self._sgpsor_pub = rospy.Publisher(
+            rospy.get_param('~mavros_setgps_origin', '/mavros/global_position/set_gp_origin'),
+            GeoPointStamped, queue_size=1
+        )
         
         self.mqtt_client = MqttClient(self)
         self.flight_controller = FlightController(self)
@@ -2202,7 +2223,7 @@ class CoffeeProjNode:
         self.state_machine = TaskStateMachine(self, self.flight_controller, self.mqtt_client)
         self.state_machine.start()
         
-        rospy.Timer(
+        self.pubTimer = rospy.Timer(
             rospy.Duration(1.0 / self.telemetry_rate),
             self._publish_telemetry
         )
@@ -2233,6 +2254,10 @@ class CoffeeProjNode:
         """电池状态回调"""
         self._battery = msg
     
+    def _cb_gps_origin(self, msg):
+        """GPS原点回调"""
+        self._gps_origin = msg
+
     def _publish_telemetry(self, event):
         """
         定时发布遥测数据
@@ -2250,7 +2275,7 @@ class CoffeeProjNode:
         """
         try:
             # 调试：确认定时器触发（使用loginfo确保能看到）
-            rospy.loginfo("[CoffeeProj] Telemetry timer triggered")
+            # rospy.loginfo("[CoffeeProj] Telemetry timer triggered")
             
             if not self.mqtt_client.is_connected():
                 rospy.logdebug("[CoffeeProj] MQTT not connected, skip telemetry")
@@ -2366,6 +2391,27 @@ class CoffeeProjNode:
             home.get('lng', 0),
             home.get('cruiseHeight', 0)
         )
+
+        #每次收到新任务时，更新gp_origin
+        # Geographic point, using the WGS 84 reference ellipsoid.
+
+        # Latitude [degrees]. Positive is north of equator; negative is south
+        # (-90 <= latitude <= +90).
+        #float64 latitude
+
+        # Longitude [degrees]. Positive is east of prime meridian; negative is
+        # west (-180 <= longitude <= +180). At the poles, latitude is -90 or
+        # +90, and longitude is irrelevant, but must be in range.
+        #float64 longitude
+
+        # Altitude [m]. Positive is above the WGS 84 ellipsoid (NaN if unspecified).
+        #float64 altitude
+        if home_gps[0] != 0 and home_gps[1] != 0:
+            gp_origin_msg = GeoPointStamped()
+            gp_origin_msg.position.latitude = home_gps[0]
+            gp_origin_msg.position.longitude = home_gps[1]
+            self._sgpsor_pub.publish(gp_origin_msg)
+            rospy.loginfo("[CoffeeProj] Updated GPS origin to lat=%.6f, lng=%.6f", home_gps[0], home_gps[1])
         
         dest = task.get('dest', {})
         dest_gps = (
@@ -2521,6 +2567,9 @@ class CoffeeProjNode:
         
         # 中断当前任务
         self.state_machine.request_abort()
+        while self.state_machine.get_state() not in [FlightState.ABORTED, FlightState.FAILED, FlightState.ERROR, FlightState.IDLE]:
+            rospy.loginfo("[CoffeeProj] Waiting for state machine to abort current task...")
+            rospy.sleep(1.0)
         
         # 执行返航测试
         t = threading.Thread(target=self.flight_controller.return_to_home, daemon=True)

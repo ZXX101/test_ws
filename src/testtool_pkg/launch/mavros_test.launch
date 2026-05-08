@@ -1,0 +1,13 @@
+<launch>
+  <arg name="takeoff_alt" default="5.0" doc="Default takeoff altitude (meters)"/>
+  <arg name="setpoint_rate" default="20.0" doc="Setpoint publishing rate (Hz)"/>
+  <arg name="debug_setPosition_gps" default="true" doc="Use GPS setpoint mode"/>
+  <arg name="fcu_url" default="udp://:14540@127.0.0.1:14557" doc="MAVROS FCU connection URL"/>
+
+  
+  <node pkg="testtool_pkg" type="mavros_test_node.py" name="mavros_test_node" output="screen">
+    <param name="takeoff_alt" value="$(arg takeoff_alt)"/>
+    <param name="setpoint_rate" value="$(arg setpoint_rate)"/>
+    <param name="debug_setPosition_gps" value="$(arg debug_setPosition_gps)"/>
+  </node>
+</launch>
