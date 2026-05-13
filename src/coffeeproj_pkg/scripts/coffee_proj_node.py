@@ -1244,7 +1244,7 @@ class FlightController:
         Args:
             node: 父节点对象（CoffeeProjNode）
         """
-        self.node = node
+        self.node = CoffeeProjNode(node)
         
         self.takeoff_alt = rospy.get_param('~takeoff_alt', 5.0)
         self.unload_timeS = rospy.get_param('~unload_timeS', 30.0)
@@ -1572,8 +1572,8 @@ class FlightController:
                 return False
             
             # Check if reached target
-            current_lat = self.node._global_pos.latitude
-            current_lon = self.node._global_pos.longitude
+            current_lat = CoffeeProjNode(self.node)._global_pos.latitude
+            current_lon = self.node._global_pos.longitude 
             current_agl = self.node._relative_alt
             
             # Calculate horizontal distance using haversine approximation
@@ -2125,6 +2125,15 @@ class FlightController:
         """
         rospy.loginfo("[Flight] Returning to drone home (ENU origin) - ONLY FOR SIM TESTING")
         
+        # 返航逻辑：
+        # 收到外部的返航指令后会进入这个函数。
+        # 如果想在实飞流程使用，应遵循以下流程：
+        # 1. 检查是否要执行这个返航：是否已经处在home位置？(放在外面做，因为flightcontroller获取不到当前位置)
+        # 2. 检查是否处于返航状态
+        # 3. 检查飞行状态，先起飞到返航高度再飞往home坐标
+
+
+
         current_z = self._local_pose.pose.position.z
         
         # 如果在地面或很低，先起飞
@@ -2183,6 +2192,7 @@ class CoffeeProjNode:
         self._local_vel = TwistStamped()
         self._global_pos = NavSatFix()
         self._battery = BatteryState()
+        self._gps_origin = GeoPointStamped()
         self._relative_alt = 0.0
         
         rospy.Subscriber(
@@ -2571,6 +2581,13 @@ class CoffeeProjNode:
             rospy.loginfo("[CoffeeProj] Waiting for state machine to abort current task...")
             rospy.sleep(1.0)
         
+        # 检查当前位置是否是home(由于降落上锁会导致home变化，所以节点代码使用的home其实是自己设置的gps_origin)
+        currentPos = [self._global_pos.longitude,self._global_pos.latitude]
+        homePos = [self._gps_origin.position.longitude,self._global_pos.latitude]
+
+        # 计算位置差距
+        
+
         # 执行返航测试
         t = threading.Thread(target=self.flight_controller.return_to_home, daemon=True)
         t.start()
