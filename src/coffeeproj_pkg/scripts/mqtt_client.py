@@ -17,6 +17,7 @@ import os
 import ssl
 import sys
 import threading
+from typing import TYPE_CHECKING 
 
 import rospy
 import paho.mqtt.client as mqtt
@@ -249,7 +250,7 @@ class MqttClient:
         }
 
         self._mqtt.publish(self.TOPIC_STATUS, json.dumps(payload), qos=1)
-        rospy.loginfo("[MQTT] Status published: state=%d msg=%s orderId=%s", task_state, message, order_id)
+        rospy.loginfo("[MQTT] Status published: task_state=%d msg=%s orderId=%s", task_state, message, order_id)
 
     def shutdown(self):
         """

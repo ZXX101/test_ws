@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+from typing import TYPE_CHECKING
 
 import rospy
 
@@ -694,11 +695,11 @@ class TaskStateMachine:
 
         self.mqtt_client.publish_status(
             task_data['task_id'],
-            FlightState.ARRIVED,
+            FlightState.RTL_LANDING,
             "Arrived at home, hovering for land command",
             task_data['order_id']
         )
-        self.set_state(FlightState.ARRIVED)
+        self.set_state(FlightState.RTL_LANDING)
 
     def _handle_rtl_landing(self):
         """
