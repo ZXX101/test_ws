@@ -36,6 +36,7 @@ from utils import (
 from flight_controller import FlightController
 from mqtt_client import MqttClient
 from state_machine import TaskStateMachine
+from zeroone_rtk import ZerooneRtk
 
 from std_msgs.msg import Header, Float64
 from geometry_msgs.msg import PoseStamped, TwistStamped
@@ -111,6 +112,8 @@ class CoffeeProjNode:
             rospy.get_param('~mavros_setgps_origin', '/mavros/global_position/set_gp_origin'),
             GeoPointStamped, queue_size=1
         )
+
+        self.zeroone_rtk = ZerooneRtk(self)
 
         self.mqtt_client = MqttClient(self)
         self.flight_controller = FlightController(self)
@@ -458,6 +461,8 @@ class CoffeeProjNode:
         rospy.spin()
 
         self.state_machine.stop()
+        if self.zeroone_rtk:
+            self.zeroone_rtk.shutdown()
         self.mqtt_client.shutdown()
 
 

@@ -108,6 +108,9 @@ class MqttClient:
             client.subscribe(self.TOPIC_COMMAND, qos=1)
             rospy.loginfo("[MQTT] Connected. Subscribed to [%s, %s]",
                           self.TOPIC_TASK, self.TOPIC_COMMAND)
+            # 注册RTK数据订阅
+            if hasattr(self.node, 'zeroone_rtk') and self.node.zeroone_rtk:
+                self.node.zeroone_rtk.register_mqtt_subscription(self)
         else:
             rospy.logerr("[MQTT] Connection refused (rc=%s)", rc)
 
@@ -125,10 +128,19 @@ class MqttClient:
         MQTT消息接收回调
 
         解析JSON并转发给父节点处理
+        RTK数据（/px4/rtkdata）为二进制数据，直接转发
         """
         try:
-            payload = json.loads(msg.payload.decode('utf-8'))
             topic = msg.topic
+
+            # RTK数据话题处理（二进制数据）
+            if topic == "/px4/rtkdata":
+                if hasattr(self.node, 'zeroone_rtk') and self.node.zeroone_rtk:
+                    self.node.zeroone_rtk.handle_rtk_data(msg.payload)
+                return
+
+            # 其他话题处理（JSON数据）
+            payload = json.loads(msg.payload.decode('utf-8'))
 
             if topic == self.TOPIC_TASK:
                 self.node.handle_task(payload)
