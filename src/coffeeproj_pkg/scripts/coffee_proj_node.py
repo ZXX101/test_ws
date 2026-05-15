@@ -1172,10 +1172,10 @@ class MqttClient:
                 }
             }
         # if self.debug_log_telemetry:
-        rospy.loginfo("[MQTT] Publishing telemetry: taskId=%s status=%s pos=(%.6f, %.6f, %.1f) battery=%.1f%% mode=%s",
-                    payload['taskId'], payload['status'], 
-                    payload['position']['lat'], payload['position']['lng'], payload['position']['alt'],
-                    payload['position']['battery'], payload['position']['flightMode'])
+            rospy.loginfo("[MQTT] Publishing telemetry: taskId=%s status=%s pos=(%.6f, %.6f, %.1f) battery=%.1f%% mode=%s",
+                        payload['taskId'], payload['status'], 
+                        payload['position']['lat'], payload['position']['lng'], payload['position']['alt'],
+                        payload['position']['battery'], payload['position']['flightMode'])
             
         self._mqtt.publish(self.TOPIC_TELEMETRY, json.dumps(payload), qos=1)
     
@@ -1300,7 +1300,7 @@ class FlightController:
             rospy.wait_for_service(rospy.get_param('~mavros_set_mode_srv', '/mavros/set_mode'), timeout=15.0)
             rospy.loginfo("[Flight] MAVROS services available.")
         except rospy.ROSException as e:
-            rospy.logwarn("[Flight] MAVROS services not available yet.")
+            rospy.logwarn("[Flight] MAVROS services not available yet.Execption %s" % (e,))
         
         self._arm_client = rospy.ServiceProxy(
             rospy.get_param('~mavros_arming_srv', '/mavros/cmd/arming'), CommandBool
@@ -2244,7 +2244,7 @@ class CoffeeProjNode:
         """
         try:
             # 调试：确认定时器触发（使用loginfo确保能看到）
-            rospy.loginfo("[CoffeeProj] Telemetry timer triggered")
+            # rospy.loginfo("[CoffeeProj] Telemetry timer triggered")
             
             if not self.mqtt_client.is_connected():
                 rospy.logdebug("[CoffeeProj] MQTT not connected, skip telemetry")

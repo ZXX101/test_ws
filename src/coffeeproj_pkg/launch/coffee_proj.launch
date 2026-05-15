@@ -57,7 +57,7 @@
   </node>
 
   <node if="$(arg start_pod_down)" name="pod_down" pkg="coffeeproj_pkg" type="pod_down.py" output="screen" required="true">
-    <param name="pod_host" value="192.168.1.14" />
+    <param name="pod_host" value="192.168.100.20" />
     <param name="pod_port" value="2332"/>
   </node>
 </launch>
