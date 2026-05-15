@@ -32,6 +32,8 @@
     <param name="mavros_global_pos" value="/mavros/global_position/global" />
     <param name="mavros_battery" value="/mavros/battery" />
     <param name="mavros_home_pos" value="/mavros/home_position/home" />
+    <param name="mavros_gps_origin" value="/mavros/global_position/gp_origin" />
+    <param name="mavros_setgps_origin" value="/mavros/global_position/set_gp_origin" />
     <param name="mavros_setpoint_pos" value="/mavros/setpoint_position/local" />
     <param name="mavros_setpoint_pos_global" value="/mavros/setpoint_position/global" />
     <param name="mavros_arming_srv" value="/mavros/cmd/arming" />
@@ -41,7 +43,7 @@
     <param name="takeoff_alt" value="2.0" />
     <param name="unload_timeS" value="8.0" />
     <param name="cruise_speed" value="30.0" />
-    <param name="waypoint_tolerance" value="1.5" />
+    <param name="waypoint_tolerance" value="1.0" />
     <param name="pre_land_alt" value="3.0" />
     <param name="ground_threshold" value="0.25" />
     <param name="rth_alt" value="10.0" />
